@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+
+  <!-- CLAVE PARA APP MÓVIL -->
+  <meta name="viewport"
+        content="width=device-width,
+                 initial-scale=1,
+                 maximum-scale=1,
+                 user-scalable=no">
+
+  <title>Calculadora de Oro</title>
+
+  <!-- 🔹 MANIFEST PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, Arial;
+      background: #f4f6f8;
+      padding: 6px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 408px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 20px;
+      margin: 8px 0;
+    }
+
+    .formulario {
+      background: #fff;
+      padding: 6px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.15);
+      margin-bottom: 4px;
+    }
+
+    .fila {
+      display: grid;
+      grid-template-columns: 56px 52px 120px 72px 90px 26px;
+    }
+
+    select, input, button {
+      padding: 6px;
+      font-size: 15px;
+      border: 1px solid #cbd5e1;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #2563eb;
+      color: #fff;
+      border-left: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.15);
+    }
+
+    thead tr,
+    tbody tr,
+    tfoot tr {
+      display: grid;
+      grid-template-columns: 56px 52px 120px 72px 90px 26px;
+    }
+
+    th, td {
+      padding: 5px 4px;
+      font-size: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: right;
+    }
+
+    th {
+      background: #2563eb;
+      color: #fff;
+      font-size: 11px;
+      text-align: center;
+    }
+
+    td.detalle { text-align: left; }
+
+    tfoot td {
+      font-weight: bold;
+      background: #f1f5f9;
+    }
+
+    .btn-del {
+      background: none;
+      border: none;
+      color: #dc2626;
+      font-size: 16px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="app">
+
+  <h1>Calculadora de Oro</h1>
+
+  <div class="formulario">
+    <div class="fila">
+      <select id="tipo">
+        <option value="V">Venta</option>
+        <option value="C">Compra</option>
+      </select>
+
+      <input id="gramos" inputmode="decimal" placeholder="Gr">
+      <input id="detalle" placeholder="Detalle">
+      <input id="precio" inputmode="numeric" placeholder="$">
+
+      <button onclick="guardar()">💾</button>
+      <div></div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>C/V</th>
+        <th>Gr</th>
+        <th>Detalle</th>
+        <th>$</th>
+        <th>Total</th>
+        <th></th>
+      </tr>
+    </thead>
+
+    <tbody id="tbody"></tbody>
+
+    <tfoot>
+      <tr>
+        <td></td>
+        <td id="sumGr">0</td>
+        <td></td>
+        <td></td>
+        <td id="granTotal">$ 0</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>
+
+</div>
+
+<script>
+  let filas = [];
+  let editIndex = null;
+
+  const cop = v =>
+    (v < 0 ? "-$ " : "$ ") + Math.abs(v).toLocaleString("es-CO");
+
+  const num = v =>
+    parseFloat(v.replace(/[^0-9.,]/g,"").replace(",", ".")) || 0;
+
+  function guardar() {
+    const data = {
+      tipo: tipo.value,
+      gramos: num(gramos.value),
+      detalle: detalle.value || "-",
+      precio: num(precio.value)
+    };
+    if (!data.gramos || !data.precio) return;
+
+    if (editIndex !== null) {
+      filas[editIndex] = data;
+      editIndex = null;
+    } else {
+      filas.push(data);
+    }
+
+    gramos.value = detalle.value = precio.value = "";
+    render();
+  }
+
+  function editar(i) {
+    const f = filas[i];
+    tipo.value = f.tipo;
+    gramos.value = f.gramos;
+    detalle.value = f.detalle;
+    precio.value = f.precio;
+    editIndex = i;
+  }
+
+  function eliminar(i) {
+    if (!confirm("¿Eliminar esta fila?")) return;
+    filas.splice(i, 1);
+    render();
+  }
+
+  function render() {
+    let total = 0;
+    let gramosSum = 0;
+    tbody.innerHTML = "";
+
+    filas.forEach((f, i) => {
+      let t = f.gramos * f.precio;
+      if (f.tipo === "C") t *= -1;
+
+      total += t;
+      gramosSum += f.gramos;
+
+      tbody.innerHTML += `
+        <tr>
+          <td onclick="editar(${i})">${f.tipo}</td>
+          <td onclick="editar(${i})">${f.gramos}</td>
+          <td class="detalle" onclick="editar(${i})">${f.detalle}</td>
+          <td onclick="editar(${i})">${cop(f.precio)}</td>
+          <td onclick="editar(${i})">${cop(t)}</td>
+          <td style="text-align:center">
+            <button class="btn-del" onclick="eliminar(${i})">❌</button>
+          </td>
+        </tr>`;
+    });
+
+    granTotal.innerText = cop(total);
+    sumGr.innerText = gramosSum.toFixed(2);
+  }
+
+  /* 🔹 REGISTRAR SERVICE WORKER (PWA) */
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+  }
+</script>
+
+</body>
+</html>
